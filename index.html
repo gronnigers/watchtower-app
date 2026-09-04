@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d8f86">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Watchtower">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>Watchtower</title>
+<script>try{var _t=localStorage.getItem("wt_theme");if(_t==="dark"||_t==="light")document.documentElement.setAttribute("data-theme",_t);}catch(e){}</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+  :root{
+    --bg:#f4f6fa; --sfc:#ffffff; --ink:#16202e; --mut:#6b7688; --bd:#e7ebf1;
+    --teal:#0d8f86; --teald:#0a6a63; --tealw:#e2f2f0;
+    --crit:#d64545; --critw:#fbe7e7; --warn:#b9770a; --warnw:#fbefd8;
+    --info:#3a6fd4; --infow:#e6edfb; --ok:#2c8a5b; --okw:#e0f0e7;
+    --safe-top:env(safe-area-inset-top,0px); --safe-bot:env(safe-area-inset-bottom,0px);
+  }
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+    --bg:#0d1219; --sfc:#141c26; --ink:#eaf0f7; --mut:#8593a5; --bd:#26313f;
+    --teal:#2bc0b4; --teald:#57d3c8; --tealw:#123029;
+    --crit:#f2696b; --critw:#331a1c; --warn:#e0a63c; --warnw:#2f2410;
+    --info:#6c9bf0; --infow:#141f33; --ok:#54c188; --okw:#122a1e;
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0d1219; --sfc:#141c26; --ink:#eaf0f7; --mut:#8593a5; --bd:#26313f;
+    --teal:#2bc0b4; --teald:#57d3c8; --tealw:#123029;
+    --crit:#f2696b; --critw:#331a1c; --warn:#e0a63c; --warnw:#2f2410;
+    --info:#6c9bf0; --infow:#141f33; --ok:#54c188; --okw:#122a1e;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{position:fixed;inset:0;overflow:hidden;overscroll-behavior:none;
+    background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    line-height:1.5;-webkit-font-smoothing:antialiased}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+  #app{max-width:520px;height:100%;margin:0 auto;display:flex;flex-direction:column}
+
+  .topbar{padding:calc(12px + var(--safe-top)) 18px 12px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:18px;letter-spacing:-.01em}
+  .brand .lg{color:var(--teal)}
+  .gear{width:34px;height:34px;border-radius:10px;background:var(--sfc);border:1px solid var(--bd);display:grid;place-items:center;color:var(--mut);font-size:15px;cursor:pointer}
+
+  .view{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:4px 16px 20px}
+  .view::-webkit-scrollbar{width:0}
+
+  /* zen */
+  .zen{display:flex;flex-direction:column;align-items:center;padding:10px 0 2px}
+  .ring{position:relative;width:210px;height:210px;display:grid;place-items:center}
+  .ring svg{position:absolute;inset:0}
+  .ring .num{font-size:68px;font-weight:700;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+  .ring .cap{font-size:12.5px;color:var(--mut);margin-top:3px}
+  .zen .head{font-size:18px;font-weight:600;margin-top:18px;text-align:center}
+  .zen .said{font-size:13px;color:var(--mut);max-width:32ch;text-align:center;margin-top:4px}
+
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:22px}
+  .tile{background:var(--sfc);border:1px solid var(--bd);border-radius:16px;padding:15px;cursor:pointer;text-align:left;transition:transform .12s}
+  .tile:active{transform:scale(.97)}
+  .tile .n{font-size:28px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+  .tile .l{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;font-family:"IBM Plex Mono",monospace;margin-top:7px}
+
+  .lbl{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:24px 2px 10px;font-weight:600}
+
+  .alert{display:flex;gap:11px;background:var(--sfc);border:1px solid var(--bd);border-radius:15px;padding:13px 14px;position:relative;overflow:hidden;cursor:pointer;transition:transform .12s}
+  .alert:active{transform:scale(.98)}
+  .alert+.alert{margin-top:10px}
+  .alert.ack{opacity:.55}
+  .alert .bar{position:absolute;left:0;top:0;bottom:0;width:4px}
+  .alert .dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:5px}
+  .alert .tx{flex:1;min-width:0}
+  .alert .tt{font-weight:600;font-size:13.5px;letter-spacing:-.005em;line-height:1.3}
+  .alert .st{font-size:12px;color:var(--mut);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .alert .tm{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--mut);flex:none;padding-top:3px}
+  .alert .chev{color:var(--mut);font-size:16px;align-self:center;opacity:.5}
+  .bg-crit{background:var(--crit)} .bg-warn{background:var(--warn)} .bg-info{background:var(--info)} .bg-ok{background:var(--ok)}
+  .c-crit{color:var(--crit)} .c-warn{color:var(--warn)} .c-info{color:var(--info)} .c-ok{color:var(--ok)}
+
+  .banner{border-radius:17px;padding:16px;display:flex;gap:13px;align-items:center}
+  .banner .mk{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:22px;font-weight:700;color:#fff;flex:none}
+  .banner .bt{font-weight:700;font-size:15px} .banner .bs{font-size:12px;color:var(--mut)}
+
+  .seg{display:flex;background:var(--sfc);border:1px solid var(--bd);border-radius:11px;padding:3px;gap:2px;margin-bottom:14px}
+  .seg div{flex:1;text-align:center;font-size:11.5px;font-weight:600;color:var(--mut);padding:7px 0;border-radius:8px;cursor:pointer}
+  .seg div.on{background:var(--bg);color:var(--ink);box-shadow:inset 0 0 0 1px var(--bd)}
+
+  .pushcard{background:var(--tealw);border:1px solid var(--bd);border-radius:15px;padding:15px 16px;margin-top:14px;display:flex;align-items:center;gap:13px}
+  .pushcard .tx{flex:1}
+  .pushcard .tt{font-weight:600;font-size:14px}
+  .pushcard .ss{font-size:12px;color:var(--mut);margin-top:2px}
+
+  .btn{display:block;width:100%;text-align:center;font-weight:600;font-size:14px;border-radius:12px;padding:13px;border:none;cursor:pointer;transition:transform .12s;font-family:inherit}
+  .btn:active{transform:scale(.98)}
+  .btn.solid{background:var(--teal);color:#fff} .btn.small{width:auto;padding:10px 16px;font-size:13px}
+  .btn.ghost{background:var(--sfc);border:1.5px solid var(--bd);color:var(--ink)}
+  .btn.danger{background:var(--crit);color:#fff}
+  .field{width:100%;font-family:"IBM Plex Mono",monospace;font-size:13px;padding:12px 13px;border:1px solid var(--bd);border-radius:11px;background:var(--sfc);color:var(--ink);margin-top:6px}
+  .flabel{font-size:12px;font-weight:600;color:var(--ink);margin-top:16px;display:block}
+  .fhint{font-size:11.5px;color:var(--mut);margin-top:3px}
+
+  /* detail */
+  .dhead{display:flex;align-items:center;gap:11px;padding:6px 0 12px}
+  .back{width:34px;height:34px;border-radius:10px;background:var(--sfc);border:1px solid var(--bd);display:grid;place-items:center;font-size:17px;color:var(--ink);cursor:pointer;flex:none}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px}
+  .dtitle{font-size:21px;font-weight:700;letter-spacing:-.015em;line-height:1.2}
+  .dmeta{font-size:12px;color:var(--mut);margin-top:4px}
+  .facts{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--bd);border:1px solid var(--bd);border-radius:14px;overflow:hidden;margin-top:16px}
+  .facts .f{background:var(--sfc);padding:12px 13px}
+  .facts .fl{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.06em;color:var(--mut);text-transform:uppercase}
+  .facts .fv{font-weight:600;font-size:13px;margin-top:3px;word-break:break-word}
+  .why{background:var(--sfc);border:1px solid var(--bd);border-radius:14px;padding:13px 14px;margin-top:16px;font-size:12.5px;color:var(--ink);line-height:1.55}
+  .why b{color:var(--teal)}
+  .actbar{display:flex;gap:9px;margin-top:18px}
+
+  .empty{text-align:center;color:var(--mut);padding:40px 20px}
+  .empty .big{font-size:34px;margin-bottom:8px}
+  .spinner{width:26px;height:26px;border:3px solid var(--bd);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite;margin:40px auto}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .tabbar{display:flex;justify-content:space-around;align-items:center;padding:10px 6px calc(14px + var(--safe-bot));border-top:1px solid var(--bd);background:var(--sfc)}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10px;color:var(--mut);font-weight:600;cursor:pointer;padding:2px 14px;position:relative}
+  .tab.on{color:var(--teal)}
+  .tab svg{width:23px;height:23px}
+  .tab .cnt{position:absolute;top:-3px;right:6px;background:var(--crit);color:#fff;font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:8px;display:grid;place-items:center;padding:0 3px}
+
+  .toast{position:fixed;left:50%;transform:translateX(-50%) translateY(12px);bottom:calc(90px + var(--safe-bot));background:#151d29;color:#eaf0f7;border-radius:13px;padding:12px 16px;font-size:13px;z-index:50;opacity:0;transition:.28s;pointer-events:none;max-width:88%}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* connect screen */
+  .connect{max-width:400px;height:100%;overflow-y:auto;overscroll-behavior:contain;margin:0 auto;padding:calc(40px + var(--safe-top)) 22px 40px}
+  .connect .logo{width:64px;height:64px;border-radius:18px;background:var(--teal);display:grid;place-items:center;color:#fff;font-size:30px;margin-bottom:18px}
+  .connect h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+  .connect p{color:var(--mut);font-size:14px;margin:0 0 8px}
+
+  /* geo watch */
+  .map{position:relative;border:1px solid var(--bd);border-radius:16px;overflow:hidden;margin-top:4px;
+      background-color:var(--sfc);
+      background-image:radial-gradient(120% 120% at 50% -10%, color-mix(in srgb, var(--teal) 8%, var(--sfc)), var(--sfc))}
+  .map svg{display:block;width:100%;height:auto}
+  .grid-l{stroke:var(--bd);stroke-width:.4;fill:none;opacity:.7}
+  .grid-eq{stroke:var(--mut);stroke-width:.5;fill:none;opacity:.5}
+  .pin-halo{opacity:.28}
+  .pin-hit{fill:transparent;cursor:pointer}
+  .pulse{transform-origin:center;transform-box:fill-box;animation:pulse 2s ease-out infinite}
+  @keyframes pulse{0%{opacity:.55;r:2.4}70%{opacity:0;r:9}100%{opacity:0;r:9}}
+  .mapcap{position:absolute;left:12px;bottom:9px;font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);opacity:.8}
+  .geolist{margin-top:16px}
+  .rbadge{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:999px;font-family:"IBM Plex Mono",monospace;letter-spacing:.03em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const app = $("app");
+
+// ---------- runtime (keyless: same-origin /api via SWA linked backend; SWA login gates access) ----------
+let rt = { vapidPublic: null, me: null };
+async function loadConfig(){
+  try{ const r = await fetch("/api/config"); if(r.ok){ const c = await r.json(); rt.vapidPublic = c.vapidPublic || null; } }catch(_){}
+  try{ const r = await fetch("/.auth/me"); if(r.ok){ const d = await r.json(); rt.me = (d && d.clientPrincipal) ? (d.clientPrincipal.userDetails || null) : null; } }catch(_){}
+}
+
+// ---------- theme (light / dark / system) ----------
+const THEME_KEY = "wt_theme";
+let theme = (function(){ try{ return localStorage.getItem(THEME_KEY) || "system"; }catch(_){ return "system"; } })();
+function applyTheme(t){
+  const r = document.documentElement;
+  if (t === "dark" || t === "light") r.setAttribute("data-theme", t);
+  else r.removeAttribute("data-theme");
+}
+applyTheme(theme);
+
+let state = { screen:"home", detail:null, filter:null, alerts:[], loading:false, pushOn:false };
+
+// ---------- helpers ----------
+function api(path){ return `/api/${path}`; }
+function timeAgo(iso){
+  const s = Math.floor((Date.now()-Date.parse(iso))/1000);
+  if(s<60) return "now"; if(s<3600) return Math.floor(s/60)+"m";
+  if(s<86400) return Math.floor(s/3600)+"h"; return Math.floor(s/86400)+"d";
+}
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),5000); }
+function sevClass(s){ return s==="critical"?"crit":s==="warning"?"warn":s==="info"?"info":"ok"; }
+function open(a){ return (a.state||"open")==="open"; }
+
+async function fetchAlerts(silent){
+  if(!silent){ state.loading=true; render(); }
+  try{
+    const res = await fetch(api("alerts"));
+    if(!res.ok) throw new Error("API "+res.status);
+    const data = await res.json();
+    state.alerts = data.alerts||[];
+  }catch(e){ if(!silent) toast("Couldn't reach the API — try again"); }
+  state.loading=false; render();
+}
+
+async function ack(a, kind){
+  try{
+    await fetch(api("ack"),{method:"POST",headers:{"Content-Type":"text/plain"},
+      body:JSON.stringify({partitionKey:a.partitionKey,rowKey:a.rowKey,kind})});
+    a.state = kind==="safe"?"safe":"acknowledged";
+    toast(kind==="safe"?"Marked safe":"Acknowledged");
+    state.screen="home"; render();
+  }catch(e){ toast("Couldn't update — try again"); }
+}
+
+// ---------- push ----------
+function urlB64ToUint8(base64){
+  const pad="=".repeat((4-base64.length%4)%4);
+  const b=(base64+pad).replace(/-/g,"+").replace(/_/g,"/");
+  const raw=atob(b); const arr=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i); return arr;
+}
+async function enablePush(){
+  if(!("serviceWorker" in navigator)){ toast("No service worker support"); return; }
+  if(!("PushManager" in window)){ toast("Push not supported (needs iOS 16.4+ installed PWA)"); return; }
+  let perm;
+  try{ perm = await Notification.requestPermission(); }
+  catch(e){ toast("Permission error: "+e.message); return; }
+  if(perm!=="granted"){ toast("Notifications not granted ("+perm+")"); return; }
+
+  let reg;
+  try{ reg = await navigator.serviceWorker.ready; }
+  catch(e){ toast("SW not ready: "+e.message); return; }
+
+  if(!rt.vapidPublic){ toast("Push key still loading — try again in a sec"); return; }
+  let key;
+  try{ key = urlB64ToUint8((rt.vapidPublic||"").trim()); }
+  catch(e){ toast("Push key problem — check VAPID_PUBLIC on the backend"); return; }
+
+  let sub;
+  try{
+    sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:key });
+  }catch(e){ toast("Subscribe failed: "+(e.name||"")+" — "+(e.message||"")); return; }
+
+  try{
+    const res = await fetch(api("push/subscribe"),{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify(sub)});
+    if(!res.ok){ toast("Save failed: API returned "+res.status); return; }
+  }catch(e){ toast("Save failed (network): "+e.message); return; }
+
+  state.pushOn=true; toast("Alerts on — this device is subscribed"); render();
+}
+async function checkPush(){
+  try{ const reg=await navigator.serviceWorker.ready; const s=await reg.pushManager.getSubscription(); state.pushOn=!!s; }catch(_){}
+}
+
+// ---------- views ----------
+function homeView(){
+  const openAlerts = state.alerts.filter(open);
+  const needs = openAlerts.filter(a=>a.severity==="critical"||a.severity==="warning").length;
+  const quiet = needs===0;
+  const ringColor = quiet? "var(--ok)":"var(--warn)";
+  const circ = 2*Math.PI*84;
+  const frac = quiet?1:Math.max(.28,1-needs*0.16);
+  const off = circ*(1-frac);
+  const cats=[["admin","Admin changes"],["signin","Sign-in flags"],["risk","Risky users"],["defender","Defender"]];
+  const tiles = cats.map(([k,l])=>{
+    const c = openAlerts.filter(a=>a.category===k).length;
+    const crit = openAlerts.some(a=>a.category===k&&a.severity==="critical");
+    return `<button class="tile" data-tile="${k}"><div class="n ${crit?'c-crit':(c>0?'c-warn':'')}">${c}</div><div class="l">${l}</div></button>`;
+  }).join("");
+  const latest = openAlerts[0];
+  const latestHtml = latest
+    ? `<div class="lbl">Latest</div>${alertRow(latest)}`
+    : "";
+  const pushHtml = state.pushOn ? "" :
+    `<div class="pushcard"><div class="tx"><div class="tt">Turn on alerts</div><div class="ss">Get a push the moment something trips.</div></div><button class="btn solid small" id="pushBtn">Enable</button></div>`;
+  return `
+    <div class="topbar"><div class="brand"><span class="lg">◆</span> Watchtower</div><div class="gear" data-nav="settings">⚙</div></div>
+    <div class="view">
+      <div class="zen"><div class="ring">
+        <svg viewBox="0 0 210 210"><circle cx="105" cy="105" r="84" fill="none" stroke="var(--bd)" stroke-width="9"/>
+          <circle cx="105" cy="105" r="84" fill="none" stroke="${ringColor}" stroke-width="9" stroke-linecap="round"
+            stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${circ.toFixed(1)}" transform="rotate(-90 105 105)"
+            style="transition:stroke-dashoffset 1s cubic-bezier(.2,.7,.2,1)" data-ring="${off.toFixed(1)}"/></svg>
+        <div style="text-align:center"><div class="num ${quiet?'c-ok':''}">${needs}</div><div class="cap">${quiet?'all clear':'need you'}</div></div>
+      </div>
+      <div class="head">${quiet?'All quiet':(needs===1?'One thing to check':needs+' things to check')}</div>
+      <div class="said">${quiet?'Nothing open needs your attention right now.':'Tap a tile or an alert to dig in.'}</div></div>
+      ${pushHtml}
+      <div class="tiles">${tiles}</div>
+      ${latestHtml}
+    </div>`;
+}
+
+function placeOf(a){
+  const p=[a.city,a.country].filter(Boolean).join(", ");
+  return p||"unknown location";
+}
+function subtitleOf(a){
+  if(a.category==="signin"){
+    return esc(placeOf(a))+(a.actor?' · '+esc(a.actor):'');
+  }
+  return esc(a.target||'')+(a.actor?' · by '+esc(a.actor):'');
+}
+function alertRow(a){
+  const sc = sevClass(a.severity);
+  return `<div class="alert ${open(a)?'':'ack'}" data-alert="${a.rowKey}">
+    <span class="bar bg-${sc}"></span><span class="dot bg-${sc}"></span>
+    <div class="tx"><div class="tt">${esc(a.title)}</div><div class="st">${subtitleOf(a)}</div></div>
+    <span class="tm">${a.createdUtc?timeAgo(a.createdUtc):''}</span><span class="chev">›</span></div>`;
+}
+
+function alertsView(){
+  const f=state.filter;
+  const list=state.alerts.filter(a=>!f||a.category===f);
+  const chips=[["","All"],["admin","Admin"],["signin","Sign-ins"],["risk","Risk"]].map(([k,l])=>
+    `<div class="${(f||'')===k?'on':''}" data-filter="${k}">${l}</div>`).join("");
+  const rows = list.length? list.map(alertRow).join("")
+    : `<div class="empty"><div class="big">✓</div>No alerts in this view</div>`;
+  return `
+    <div class="topbar"><div class="brand"><span class="lg">◆</span> Alerts</div><div class="gear" data-nav="settings">⚙</div></div>
+    <div class="view"><div class="seg">${chips}</div>${rows}</div>`;
+}
+
+// equirectangular projection into a 360x180 viewBox: x = lon+180, y = 90-lat
+function projX(lon){ return (lon+180); }
+function projY(lat){ return (90-lat); }
+
+function worldMap(pins){
+  // graticule: meridians every 30°, parallels every 30°, heavier equator
+  let grid="";
+  for(let lon=-150;lon<=150;lon+=30){ const x=projX(lon); grid+=`<line class="grid-l" x1="${x}" y1="0" x2="${x}" y2="180"/>`; }
+  for(let lat=-60;lat<=60;lat+=30){ const y=projY(lat); const cls=lat===0?"grid-eq":"grid-l"; grid+=`<line class="${cls}" x1="0" y1="${y}" x2="360" y2="${y}"/>`; }
+  grid+=`<rect x="0.3" y="0.3" width="359.4" height="179.4" rx="6" class="grid-l"/>`;
+
+  // pins (newest first → pins[0] pulses)
+  let dots="";
+  pins.forEach((a,i)=>{
+    const x=projX(a.lon).toFixed(1), y=projY(a.lat).toFixed(1);
+    const sc=sevClass(a.severity);
+    const col=`var(--${sc})`;
+    const pulse=i===0?`<circle cx="${x}" cy="${y}" r="2.4" fill="${col}" class="pin-halo pulse"/>`:"";
+    dots+=`${pulse}
+      <circle cx="${x}" cy="${y}" r="4.5" fill="${col}" class="pin-halo"/>
+      <circle cx="${x}" cy="${y}" r="2.2" fill="${col}"/>
+      <circle cx="${x}" cy="${y}" r="9" class="pin-hit" data-alert="${a.rowKey}"/>`;
+  });
+
+  return `<div class="map"><svg viewBox="0 0 360 180" preserveAspectRatio="xMidYMid meet">${grid}${dots}</svg>
+    <div class="mapcap">${pins.length} located · newest pulsing</div></div>`;
+}
+
+function geoView(){
+  const sis = state.alerts.filter(a=>a.category==="signin");
+  const open_ = sis.filter(open);
+  const pins = sis.filter(a=>typeof a.lat==="number" && typeof a.lon==="number");
+
+  const header = `<div class="topbar"><div class="brand"><span class="lg">◆</span> Sign-ins</div><div class="gear" data-nav="settings">⚙</div></div>`;
+
+  if(sis.length===0){
+    return `${header}
+      <div class="view">
+        ${worldMap([])}
+        <div class="empty" style="padding-top:30px">
+          <div class="big">🌍</div>
+          <div style="font-weight:600;color:var(--ink);font-size:15px;margin-bottom:6px">All from home turf</div>
+          <div style="max-width:32ch;margin:0 auto">No risky or foreign sign-ins flagged. Anything from outside your home countries — or that Identity Protection scores as risky — lands here with a pin.</div>
+        </div>
+      </div>`;
+  }
+
+  const summary = open_.length
+    ? `<div class="said" style="margin:12px 2px 2px">${open_.length} sign-in flag${open_.length>1?'s':''} to review — tap a pin or a row.</div>`
+    : `<div class="said" style="margin:12px 2px 2px">All flagged sign-ins handled.</div>`;
+
+  const rows = sis.map(alertRow).join("");
+
+  return `${header}
+    <div class="view">
+      ${worldMap(pins)}
+      ${summary}
+      <div class="geolist"><div class="lbl">Flagged sign-ins</div>${rows}</div>
+    </div>`;
+}
+
+function detailView(){
+  const a=state.alerts.find(x=>x.rowKey===state.detail);
+  if(!a) return homeView();
+  const sc=sevClass(a.severity);
+  const col=`var(--${sc})`, wash=`var(--${sc}w)`;
+  let why, facts;
+  if(a.category==="admin"){
+    why="Someone was granted a privileged role. If this wasn't a planned change, treat it as a live compromise — revoke and investigate.";
+    facts=[["Target",a.target||"—"],["Actor",a.actor||"—"],["Source",a.source||"—"],["When",a.createdUtc?new Date(a.createdUtc).toLocaleString():"—"]];
+  } else if(a.category==="signin"){
+    const risky = a.risk && a.risk!=="none";
+    why = risky
+      ? "Identity Protection scored this sign-in as risky (impossible travel, unfamiliar location, or a known-bad IP). If it wasn't you, reset the password and revoke sessions now."
+      : "This was a successful sign-in from outside your home countries. If you weren't traveling and didn't use a VPN, treat the account as exposed.";
+    facts=[
+      ["Who",a.actor||"—"],
+      ["Location",placeOf(a)],
+      ["IP address",a.ip||"—"],
+      ["Risk",a.risk&&a.risk!=="none"?a.risk:"none flagged"],
+      ["App",a.target||"—"],
+      ["Result",(a.outcome||"—")],
+      ["When",a.createdUtc?new Date(a.createdUtc).toLocaleString():"—"],
+      ["Source",a.source||"—"],
+    ];
+  } else {
+    why="Watchtower flagged this based on your rules. Review the details and acknowledge when handled.";
+    facts=[["Target",a.target||"—"],["Actor",a.actor||"—"],["Source",a.source||"—"],["When",a.createdUtc?new Date(a.createdUtc).toLocaleString():"—"]];
+  }
+  return `
+    <div class="view">
+      <div class="dhead"><div class="back" data-back="1">‹</div>
+        <span class="chip" style="background:${wash};color:${col}">● ${(a.severity||'').toUpperCase()}</span>
+        <span class="mono" style="font-size:10px;color:var(--mut);margin-left:auto">${(a.state||'open').toUpperCase()}</span></div>
+      <div class="dtitle">${esc(a.title)}</div>
+      <div class="dmeta">${esc(a.source||'')} · ${a.createdUtc?timeAgo(a.createdUtc)+' ago':''}</div>
+      <div class="facts">${facts.map(f=>`<div class="f"><div class="fl">${f[0]}</div><div class="fv">${esc(String(f[1]))}</div></div>`).join("")}</div>
+      <div class="why"><b>Why you're seeing this.</b> ${why}</div>
+      ${open(a)?`<div class="actbar"><button class="btn danger" data-ack="ack">Acknowledge</button><button class="btn ghost" data-ack="safe">Mark safe</button></div>`
+        :`<div class="empty" style="padding:22px">Handled — marked ${a.state}.</div>`}
+    </div>`;
+}
+
+function settingsView(){
+  return `
+    <div class="view">
+      <div class="dhead"><div class="back" data-back="1">‹</div><div class="brand" style="font-size:16px">Settings</div></div>
+      <label class="flabel">Signed in as</label>
+      <div class="field" style="opacity:.85">${esc(rt.me||'—')}</div>
+      <label class="flabel">Appearance</label>
+      <div class="seg" id="themeSeg" style="margin-top:6px">
+        <div data-theme-opt="light" class="${theme==='light'?'on':''}">Light</div>
+        <div data-theme-opt="dark" class="${theme==='dark'?'on':''}">Dark</div>
+        <div data-theme-opt="system" class="${theme==='system'?'on':''}">System</div>
+      </div>
+      <div style="margin-top:22px;display:flex;flex-direction:column;gap:10px">
+        <button class="btn ghost" id="testPush">Send myself a test push</button>
+        <a class="btn ghost" href="/.auth/logout?post_logout_redirect_uri=/" style="text-align:center;text-decoration:none;line-height:1.2">Sign out</a>
+      </div>
+    </div>`;
+}
+
+function tabs(){
+  if(state.screen==="detail"||state.screen==="settings"||state.screen==="connect") return "";
+  const openCount = state.alerts.filter(open).length;
+  const ic={
+    home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
+    geo:'<path d="M12 21s-7-6.5-7-11a7 7 0 0114 0c0 4.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+    alerts:'<path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.5 21a2 2 0 01-3 0"/>'
+  };
+  const t=(k,l)=>`<div class="tab ${state.screen===k?'on':''}" data-nav="${k}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic[k]}</svg>
+    <span>${l}</span>${k==='alerts'&&openCount?`<span class="cnt">${openCount}</span>`:''}</div>`;
+  return `<div class="tabbar">${t("home","Home")}${t("geo","Sign-ins")}${t("alerts","Alerts")}</div>`;
+}
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function render(){
+  let body;
+  if(state.loading && state.screen==="home") body=`<div class="topbar"><div class="brand"><span class="lg">◆</span> Watchtower</div></div><div class="spinner"></div>`;
+  else if(state.screen==="home") body=homeView();
+  else if(state.screen==="alerts") body=alertsView();
+  else if(state.screen==="geo") body=geoView();
+  else if(state.screen==="detail") body=detailView();
+  else if(state.screen==="settings") body=settingsView();
+  app.innerHTML = body + tabs();
+  // animate ring
+  const ring=app.querySelector("[data-ring]");
+  if(ring) requestAnimationFrame(()=>requestAnimationFrame(()=>ring.setAttribute("stroke-dashoffset",ring.getAttribute("data-ring"))));
+  wire();
+}
+
+function wire(){
+  app.querySelectorAll("[data-nav]").forEach(el=>el.onclick=()=>{ state.screen=el.getAttribute("data-nav"); state.filter=null; render(); });
+  app.querySelectorAll("[data-tile]").forEach(el=>el.onclick=()=>{ state.screen="alerts"; state.filter=el.getAttribute("data-tile"); render(); });
+  app.querySelectorAll("[data-filter]").forEach(el=>el.onclick=()=>{ state.filter=el.getAttribute("data-filter")||null; render(); });
+  app.querySelectorAll("[data-alert]").forEach(el=>el.onclick=()=>{ state.detail=el.getAttribute("data-alert"); state.screen="detail"; render(); });
+  app.querySelectorAll("[data-back]").forEach(el=>el.onclick=()=>{ state.screen="home"; render(); });
+  app.querySelectorAll("[data-ack]").forEach(el=>el.onclick=()=>{ const a=state.alerts.find(x=>x.rowKey===state.detail); if(a) ack(a, el.getAttribute("data-ack")); });
+  const pb=$("pushBtn"); if(pb) pb.onclick=enablePush;
+  const tp=$("testPush"); if(tp) tp.onclick=enablePush;
+  app.querySelectorAll("[data-theme-opt]").forEach(el=>el.onclick=()=>{
+    theme=el.getAttribute("data-theme-opt");
+    try{ localStorage.setItem(THEME_KEY, theme); }catch(_){}
+    applyTheme(theme); render();
+  });
+}
+
+// ---------- boot ----------
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("/sw.js").catch(()=>{}); }
+render();
+loadConfig().then(()=>{ checkPush().then(()=>{ fetchAlerts(); }); });
+
+// Keep the dashboard fresh: refetch when the app opens/regains focus (e.g. tapping
+// a push), and quietly every 60s while it's in the foreground.
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) fetchAlerts(true); });
+window.addEventListener("focus", ()=>{ fetchAlerts(true); });
+setInterval(()=>{ if(!document.hidden) fetchAlerts(true); }, 60000);
+</script>
+</body>
+</html>
