@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Watchtower Auth Test</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:540px;margin:48px auto;padding:0 22px;color:#16202e;line-height:1.5}
+  h1{font-size:24px;letter-spacing:-.02em}
+  .status{font-size:18px;font-weight:600;margin:18px 0}
+  .btn{display:inline-block;background:#0d8f86;color:#fff;padding:13px 20px;border-radius:11px;text-decoration:none;font-size:15px;font-weight:600;border:none;cursor:pointer}
+  .btn.gray{background:#e7ebf1;color:#16202e}
+  pre{background:#f4f6fa;border:1px solid #e7ebf1;padding:14px;border-radius:11px;overflow:auto;font-size:12.5px}
+  .lbl{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6b7688;margin:22px 0 6px}
+</style>
+</head>
+<body>
+  <h1>◆ Watchtower · Auth Test</h1>
+  <p style="color:#6b7688">Bare-bones page — nothing but Entra sign-in. If this logs you in, auth works and we build up from here.</p>
+  <div class="status" id="status">Checking…</div>
+  <div id="actions"></div>
+  <div class="lbl">Raw /.auth/me response</div>
+  <pre id="me">…</pre>
+
+  <script>
+    // Kill any leftover service worker from the old app so it can't interfere with the auth flow.
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ r.unregister(); }); });
+    }
+    async function load(){
+      try{
+        const res = await fetch('/.auth/me');
+        const data = await res.json();
+        document.getElementById('me').textContent = JSON.stringify(data, null, 2);
+        const p = data && data.clientPrincipal;
+        if(p){
+          document.getElementById('status').innerHTML = '✅ Signed in as <b>' + (p.userDetails || 'you') + '</b>';
+          document.getElementById('actions').innerHTML = '<a class="btn gray" href="/.auth/logout?post_logout_redirect_uri=/">Sign out</a>';
+        } else {
+          document.getElementById('status').innerHTML = '🔒 Not signed in';
+          document.getElementById('actions').innerHTML = '<a class="btn" href="/.auth/login/aad?post_login_redirect_uri=/">Sign in with Microsoft</a>';
+        }
+      }catch(e){
+        document.getElementById('status').textContent = 'Error: ' + e.message;
+      }
+    }
+    load();
+  </script>
+</body>
+</html>
