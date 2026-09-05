@@ -193,12 +193,22 @@
   .tag-crit{background:rgba(255,90,106,.16);color:var(--crit)}
 
   /* confirm sheet */
-  .csheet{position:fixed;inset:0;background:rgba(4,10,18,.55);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
-  .csbox{background:var(--sfc);border:1px solid var(--bd);border-radius:16px;padding:18px;max-width:340px;width:100%}
+  .csheet{position:fixed;inset:0;background:rgba(4,10,18,.55);display:flex;justify-content:center;overflow-y:auto;z-index:100;padding:20px}
+  .csbox{background:var(--sfc);border:1px solid var(--bd);border-radius:16px;padding:18px;max-width:340px;width:100%;margin:auto}
   .csbox .t{font-weight:700;font-size:16px}
   .csbox .b{color:var(--mut);font-size:13px;margin-top:6px;line-height:1.5}
   .csbox .r{display:flex;gap:9px;margin-top:16px}
   .csbox .r .btn{flex:1}
+  /* incident card — grouped Who / Origin / What sections */
+  .idip{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:700;font-size:19px;letter-spacing:-.01em;word-break:break-all;margin-top:11px;line-height:1.2}
+  .idmeta{font-size:12px;color:var(--mut);margin-top:5px}
+  .idsec{padding:12px 0;border-top:1px solid var(--bd);margin-top:2px}
+  .idsec:first-of-type{margin-top:12px}
+  .idsh{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9px;letter-spacing:.11em;text-transform:uppercase;color:var(--teal);margin-bottom:8px}
+  .idkv{display:flex;justify-content:space-between;gap:16px;margin:6px 0;font-size:13.5px;line-height:1.4}
+  .idkv .k{color:var(--mut);flex:none}
+  .idkv .v{font-weight:600;text-align:right;word-break:break-word}
+  .idpara{font-size:13px;line-height:1.55;color:var(--ink);margin-top:2px}
 
   /* short landscape (e.g. iPhone flipped) — keep the zen home compact so it fits */
   @media (orientation:landscape) and (max-height:540px){
@@ -505,64 +515,65 @@ function detailView(){
   if(!a) return homeView();
   const sc=sevClass(a.severity);
   const col=`var(--${sc})`, wash=`var(--${sc}w)`;
-  let why, facts;
+  const whenCT = a.createdUtc
+    ? new Date(a.createdUtc).toLocaleString("en-US",{timeZone:"America/Chicago",month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZoneName:"short"})
+    : "—";
+  let why, groups, para="";
   if(a.category==="admin"){
     why="Someone was granted a privileged role. If this wasn't a planned change, treat it as a live compromise — revoke and investigate.";
-    facts=[["Target",a.target||"—"],["Actor",a.actor||"—"],["Source",a.source||"—"],["When",a.createdUtc?new Date(a.createdUtc).toLocaleString():"—"]];
+    groups=[
+      {sh:"Who", rows:[["Granted to",a.target||"—"],["Changed by",a.actor||"—"]]},
+      {sh:"Details", rows:[["Source",a.source||"—"],["When (CT)",whenCT]]},
+    ];
   } else if(a.category==="signin"){
     const risky = (a.kind==="risky") || (a.risk && a.risk!=="none");
     why = risky
       ? "A successful sign-in that Identity Protection scored as risky (impossible travel, unfamiliar location, or a known-bad IP). If it wasn't you, reset the password and revoke sessions now."
       : "A successful sign-in from a country outside your home list. If you weren't traveling and didn't use a VPN, treat the account as exposed.";
-    facts=[
-      ["Who",a.actor||"—"],
-      ["Location",placeOf(a)],
-      ["IP address",a.ip||"—"],
-      ["Risk",a.risk&&a.risk!=="none"?a.risk:"none flagged"],
-      ["App",a.target||"—"],
-      ["Result",(a.outcome||"—")],
-      ["When",a.createdUtc?new Date(a.createdUtc).toLocaleString():"—"],
-      ["Source",a.source||"—"],
+    groups=[
+      {sh:"Who", rows:[["Account",a.actor||"—"]]},
+      {sh:"Origin", rows:[["Location",placeOf(a)],["IP address",a.ip||"—"]]},
+      {sh:"What", rows:[
+        ["Service",a.target||"—"],
+        ["Risk",a.risk&&a.risk!=="none"?a.risk:"none flagged"],
+        ["Result",a.outcome||"—"],
+        ["When (CT)",whenCT],
+        ["Source",a.source||"—"],
+      ]},
     ];
   } else if(a.category==="defender"){
     why="Microsoft Defender raised this security alert. Open it in the Defender portal to investigate the affected asset and contain if it's real.";
-    facts=[
-      ["Category",a.dcat||"—"],
-      ["Severity",(a.severity||"—")],
-      ["Affected",a.target||"—"],
-      ["Detected by",a.svc||a.actor||"—"],
-      ["Status",a.dstatus||"—"],
-      ["When",a.createdUtc?new Date(a.createdUtc).toLocaleString():"—"],
+    groups=[
+      {sh:"Alert", rows:[["Category",a.dcat||"—"],["Severity",a.severity||"—"],["Status",a.dstatus||"—"]]},
+      {sh:"Context", rows:[["Affected",a.target||"—"],["Detected by",a.svc||a.actor||"—"],["When (CT)",whenCT]]},
     ];
-    if(a.desc) facts.push(["Details",a.desc]);
+    if(a.desc) para=a.desc;
   } else if(a.category==="risk"){
     const leaked = a.rtype==="leakedCredentials";
     why = leaked
       ? "Entra ID Protection found this user's credentials in a known leak (paste sites, breach dumps). Reset the password and revoke sessions now — assume the password is public."
       : "Entra ID Protection scored this user as risky. Review the detection and, if it wasn't legitimate, reset the password and revoke sessions.";
-    facts=[
-      ["Detection",a.title||"—"],
-      ["Risk level",(a.risk||"—")],
-      ["User",a.actor||"—"],
-      ["Where",placeOf(a)],
-      ["IP address",a.ip||"—"],
-      ["State",a.rstate||"—"],
-      ["When",a.createdUtc?new Date(a.createdUtc).toLocaleString():"—"],
+    groups=[
+      {sh:"Detection", rows:[["Type",a.title||"—"],["Risk level",a.risk||"—"],["State",a.rstate||"—"]]},
+      {sh:"Origin", rows:[["User",a.actor||"—"],["Where",placeOf(a)],["IP address",a.ip||"—"]]},
+      {sh:"Timing", rows:[["When (CT)",whenCT]]},
     ];
   } else if(a.category==="tamper"){
     why="A change to your tenant's configuration or identities — the kind of move an attacker makes after getting in (adding app secrets, granting consent, weakening Conditional Access, registering MFA). If this wasn't a planned change by you or your team, treat it as a live compromise and investigate now.";
-    facts=[
-      ["Event",a.title||"—"],
-      ["Activity",a.activity||"—"],
-      ["Changed by",a.actor||"—"],
-      ["Target",a.target||"—"],
-      ["Area",a.tcategory||"—"],
-      ["When",a.createdUtc?new Date(a.createdUtc).toLocaleString("en-US",{timeZone:"America/Chicago",timeZoneName:"short"}):"—"],
+    groups=[
+      {sh:"Change", rows:[["Event",a.title||"—"],["Activity",a.activity||"—"],["Area",a.tcategory||"—"]]},
+      {sh:"Who", rows:[["Changed by",a.actor||"—"],["Target",a.target||"—"]]},
+      {sh:"Timing", rows:[["When (CT)",whenCT]]},
     ];
   } else {
     why="Watchtower flagged this based on your rules. Review the details and acknowledge when handled.";
-    facts=[["Target",a.target||"—"],["Actor",a.actor||"—"],["Source",a.source||"—"],["When",a.createdUtc?new Date(a.createdUtc).toLocaleString():"—"]];
+    groups=[
+      {sh:"Details", rows:[["Target",a.target||"—"],["Actor",a.actor||"—"],["Source",a.source||"—"],["When (CT)",whenCT]]},
+    ];
   }
+  const kv=(k,v)=>`<div class="idkv"><span class="k">${esc(k)}</span><span class="v">${esc(String(v))}</span></div>`;
+  const secs=groups.map(g=>`<div class="idsec"><div class="idsh">${esc(g.sh)}</div>${g.rows.map(r=>kv(r[0],r[1])).join("")}</div>`).join("");
+  const paraSec = para?`<div class="idsec"><div class="idsh">Details</div><div class="idpara">${esc(para)}</div></div>`:"";
   return `
     <div class="view">
       <div class="dhead"><div class="back" data-back="1">‹</div>
@@ -570,8 +581,8 @@ function detailView(){
         <span class="mono" style="font-size:10px;color:var(--mut);margin-left:auto">${(a.state||'open').toUpperCase()}</span></div>
       <div class="dtitle">${esc(a.title)}</div>
       <div class="dmeta">${esc(a.source||'')} · ${a.createdUtc?timeAgo(a.createdUtc)+' ago':''}</div>
-      <div class="facts">${facts.map(f=>`<div class="f"><div class="fl">${f[0]}</div><div class="fv">${esc(String(f[1]))}</div></div>`).join("")}</div>
-      <div class="why"><b>Why you're seeing this.</b> ${why}</div>
+      ${secs}${paraSec}
+      <div class="why" style="margin-top:14px"><b>Why you're seeing this.</b> ${why}</div>
       ${open(a)?`<div class="actbar"><button class="btn danger" data-ack="ack">Acknowledge</button><button class="btn ghost" data-ack="safe">Mark safe</button></div>`
         :`<div class="empty" style="padding:22px">Handled — marked ${a.state}.</div>`}
     </div>`;
@@ -754,26 +765,17 @@ const ATK = {
     const loc=[p.city,p.country].filter(Boolean).join(", ")||"unknown location"; const when=this.fmtCST(p.ms);
     const k=this.ipKey(p.ip); const isMine=this.mine.indexOf(k)>=0;
     const device=[p.os,p.browser].filter(Boolean).join(" · ");
-    const facts=[
-      ["Targeted account", p.user||"—"],
-      ["Source IP", p.ip||"—"],
-      ["Service", p.app||"—"],
-      ["Client app", p.client||"—"],
-      ["Device / OS", device||"—"],
-      ["Location", loc],
-      ["When (CT)", when||"—"],
-      ["Outcome", "Blocked · failed sign-in"],
-      ["Marked as mine", isMine ? ("Yes"+(this.hideMine?" · hidden":"")) : "No"],
-    ];
-    const factsHtml=facts.map(f=>`<div class="f"><div class="fl">${f[0]}</div><div class="fv">${esc(String(f[1]))}</div></div>`).join("");
+    const kv=(k,v)=>`<div class="idkv"><span class="k">${k}</span><span class="v">${esc(String(v))}</span></div>`;
     const ov=document.createElement("div"); ov.className="csheet";
-    ov.innerHTML=`<div class="csbox" style="max-width:400px">
-      <div class="dhead" style="padding:0 0 10px"><span class="chip" style="background:${wash};color:${col}">● ${TAG}</span><span class="mono" data-x style="font-size:16px;color:var(--mut);margin-left:auto;cursor:pointer;line-height:1">✕</span></div>
-      <div class="dtitle" style="font-size:19px;word-break:break-all">${esc(p.ip||"—")}</div>
-      <div class="dmeta">${esc(loc)}${when?" · "+esc(when):""}</div>
-      <div class="facts">${factsHtml}</div>
-      <div class="why"><b>What this is.</b> A failed sign-in attempt Watchtower keeps out of your alerts. If this source is your own network (home/office), mark it as yours to drop it from the map and counts.</div>
-      <div class="r" style="margin-top:16px"><button class="btn ghost" data-no>Close</button><button class="btn ${isMine?"ghost":"solid"}" data-yes>${isMine?"Unmark as mine":"Mark as mine"}</button></div>
+    ov.innerHTML=`<div class="csbox" style="max-width:440px">
+      <div class="dhead" style="padding:0 0 2px"><span class="chip" style="background:${wash};color:${col}">● ${TAG}</span><span class="mono" data-x style="font-size:16px;color:var(--mut);margin-left:auto;cursor:pointer;line-height:1">✕</span></div>
+      <div class="idip">${esc(p.ip||"—")}</div>
+      <div class="idmeta">${esc(loc)}${when?" · "+esc(when):""}</div>
+      <div class="idsec"><div class="idsh">Who</div>${kv("Targeted account", p.user||"—")}</div>
+      <div class="idsec"><div class="idsh">Origin</div>${kv("Location", loc)}${kv("Device / OS", device||"—")}${kv("Client app", p.client||"—")}</div>
+      <div class="idsec"><div class="idsh">What</div>${kv("Service", p.app||"—")}${kv("Outcome", "Blocked · failed sign-in")}${kv("When (CT)", when||"—")}${kv("Marked as mine", isMine ? ("Yes"+(this.hideMine?" · hidden":"")) : "No")}</div>
+      <div class="why" style="margin-top:14px"><b>What this is.</b> A failed sign-in attempt Watchtower keeps out of your alerts. If this source is your own network (home/office), mark it as yours to drop it from the map and counts.</div>
+      <div class="r" style="margin-top:14px"><button class="btn ghost" data-no>Close</button><button class="btn ${isMine?"ghost":"solid"}" data-yes>${isMine?"Unmark as mine":"Mark as mine"}</button></div>
     </div>`;
     document.body.appendChild(ov);
     const close=()=>ov.remove();
