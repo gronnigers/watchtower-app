@@ -345,7 +345,7 @@ function homeView(){
   const circ = 2*Math.PI*84;
   const frac = quiet?1:Math.max(.28,1-needs*0.16);
   const off = circ*(1-frac);
-  const cats=[["admin","Admin changes"],["signin","Sign-in flags"],["risk","Risky users"],["defender","Defender"]];
+  const cats=[["admin","Admin changes"],["signin","Sign-in flags"],["risk","Risky users"],["defender","Defender"],["tamper","Tenant changes"]];
   const tiles = cats.map(([k,l])=>{
     const c = openAlerts.filter(a=>a.category===k).length;
     const crit = openAlerts.some(a=>a.category===k&&a.severity==="critical");
@@ -399,7 +399,7 @@ function alertRow(a){
 function alertsView(){
   const f=state.filter;
   const list=state.alerts.filter(a=>!f||a.category===f);
-  const chips=[["","All"],["admin","Admin"],["signin","Sign-ins"],["defender","Defender"],["risk","Risk"]].map(([k,l])=>
+  const chips=[["","All"],["admin","Admin"],["signin","Sign-ins"],["defender","Defender"],["risk","Risk"],["tamper","Tenant"]].map(([k,l])=>
     `<div class="${(f||'')===k?'on':''}" data-filter="${k}">${l}</div>`).join("");
   const rows = list.length? list.map(alertRow).join("")
     : `<div class="empty"><div class="big">✓</div>No alerts in this view</div>`;
@@ -548,6 +548,16 @@ function detailView(){
       ["IP address",a.ip||"—"],
       ["State",a.rstate||"—"],
       ["When",a.createdUtc?new Date(a.createdUtc).toLocaleString():"—"],
+    ];
+  } else if(a.category==="tamper"){
+    why="A change to your tenant's configuration or identities — the kind of move an attacker makes after getting in (adding app secrets, granting consent, weakening Conditional Access, registering MFA). If this wasn't a planned change by you or your team, treat it as a live compromise and investigate now.";
+    facts=[
+      ["Event",a.title||"—"],
+      ["Activity",a.activity||"—"],
+      ["Changed by",a.actor||"—"],
+      ["Target",a.target||"—"],
+      ["Area",a.tcategory||"—"],
+      ["When",a.createdUtc?new Date(a.createdUtc).toLocaleString("en-US",{timeZone:"America/Chicago",timeZoneName:"short"}):"—"],
     ];
   } else {
     why="Watchtower flagged this based on your rules. Review the details and acknowledge when handled.";
