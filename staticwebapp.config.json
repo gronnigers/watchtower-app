@@ -14,8 +14,10 @@
     { "route": "/.auth/*", "allowedRoles": ["anonymous", "authenticated"] },
     { "route": "/manifest.webmanifest", "allowedRoles": ["anonymous", "authenticated"] },
     { "route": "/sw.js", "allowedRoles": ["anonymous", "authenticated"] },
-    { "route": "/icon-192.png", "allowedRoles": ["anonymous", "authenticated"] },
-    { "route": "/icon-512.png", "allowedRoles": ["anonymous", "authenticated"] },
+    { "route": "/icon-*.png", "allowedRoles": ["anonymous", "authenticated"] },
+    { "route": "/favicon.svg", "allowedRoles": ["anonymous", "authenticated"] },
+    { "route": "/favicon-32.png", "allowedRoles": ["anonymous", "authenticated"] },
+    { "route": "/apple-touch-icon.png", "allowedRoles": ["anonymous", "authenticated"] },
     { "route": "/*", "allowedRoles": ["authenticated"] }
   ],
   "responseOverrides": {
@@ -23,10 +25,11 @@
   },
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/icon-*.png", "/manifest.webmanifest", "/sw.js"]
+    "exclude": ["/icon-*.png", "/favicon.svg", "/favicon-32.png", "/apple-touch-icon.png", "/manifest.webmanifest", "/sw.js"]
   },
   "mimeTypes": {
-    ".webmanifest": "application/manifest+json"
+    ".webmanifest": "application/manifest+json",
+    ".svg": "image/svg+xml"
   },
   "globalHeaders": {
     "Service-Worker-Allowed": "/"
