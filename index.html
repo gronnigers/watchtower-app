@@ -743,9 +743,13 @@ const ATK = {
     const TAG = sev==="crit"?"MALICIOUS":sev==="risk"?"RISKY":"BLOCKED";
     const loc=[p.city,p.country].filter(Boolean).join(", ")||"unknown location"; const when=this.fmtCST(p.ms);
     const k=this.ipKey(p.ip); const isMine=this.mine.indexOf(k)>=0;
+    const device=[p.os,p.browser].filter(Boolean).join(" · ");
     const facts=[
       ["Targeted account", p.user||"—"],
       ["Source IP", p.ip||"—"],
+      ["Service", p.app||"—"],
+      ["Client app", p.client||"—"],
+      ["Device / OS", device||"—"],
       ["Location", loc],
       ["When (CT)", when||"—"],
       ["Outcome", "Blocked · failed sign-in"],
